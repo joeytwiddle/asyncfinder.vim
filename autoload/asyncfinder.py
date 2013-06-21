@@ -13,6 +13,7 @@ async_pattern = None
 async_prev_pattern = None
 async_prev_mode = None
 async_output = None
+async_wherenow = ""
 
 class AsyncOutput:
     def __init__(self):
@@ -159,12 +160,14 @@ class AsyncGlobber:
         self.walk(pre,post,rec_index != None)
 
     def walk(self,dir, pattern, recurse=True):
+        global async_wherenow
         for root, dirs, files in os.walk(dir):
             if self.output.toExit():
                 break
             if self.fnmatch_list(root,self.ignore_dirs):
                 continue
             for d in dirs:
+                async_wherenow = os.path.join(root,d)
                 if self.fnmatch(os.path.join(root,d),pattern):
                     if not self.fnmatch_list(d,self.ignore_dirs):
                         self.addDir(os.path.join(root,d))
@@ -185,6 +188,7 @@ def AsyncRefreshI():
 
 def AsyncRefresh():
     global async_pattern, async_prev_pattern, async_prev_mode, async_output
+    global async_wherenow
     if len(vim.current.buffer) == 1:
         vim.command("bd!")
         return
@@ -248,7 +252,7 @@ def AsyncRefresh():
     if running:
         dots = '.'*random.randint(1,3)
         dots = dots+' '*(3-len(dots))
-        vim.current.buffer[0] = 'Searching files'+dots+' '+modestr
+        vim.current.buffer[0] = 'Searching '+async_wherenow+dots+' '+modestr
     else:
         vim.current.buffer[0] = 'Type your pattern  '+modestr
     if async_output != None:
