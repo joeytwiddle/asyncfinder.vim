@@ -244,12 +244,13 @@ def AsyncRefresh():
             async_output.exit()
             async_output = None
     running = async_output != None and not async_output.toExit()
+    modestr = '(mode: '+mode+' cwd: '+os.getcwd()+')'
     if running:
         dots = '.'*random.randint(1,3)
         dots = dots+' '*(3-len(dots))
-        vim.current.buffer[0] = 'Searching files'+dots+' (mode: '+mode+' cwd: '+os.getcwd()+')'
+        vim.current.buffer[0] = 'Searching files'+dots+' '+modestr
     else:
-        vim.current.buffer[0] = 'Type your pattern  (mode: '+mode+' cwd: '+os.getcwd()+')' 
+        vim.current.buffer[0] = 'Type your pattern  '+modestr
     if async_output != None:
         output = async_output.get()
         if len(output) > 0:
