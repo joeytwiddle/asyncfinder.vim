@@ -196,6 +196,16 @@ function! asyncfinder#OpenWindow(bang,win,pattern)
         inoremap <buffer> <C-q> <ESC>:silent! bd! \| echo<CR>
         inoremap <buffer> <C-f> <C-o>:call <SID>ChangeMode()<CR>
         nnoremap <buffer> <C-f> :call <SID>ChangeMode()<CR>
+
+        " (C-q doesn't work in xterm, probably being intercepted by terminal as "un-freeze")
+        inoremap <buffer> <C-c> <ESC>:silent! bd! \| echo<CR>
+        nnoremap <buffer> <C-c> :silent! bd! \| echo<CR>
+        nnoremap <buffer> <Esc> :silent! bd! \| echo<CR>
+        setlocal nolist   " To hide the annoying $ char
+        if exists("+relativenumber")
+            :setlocal relativenumber
+        endif
+
         startinsert
         let pattern = a:pattern
         if a:bang == '!'
