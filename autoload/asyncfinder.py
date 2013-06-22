@@ -254,7 +254,7 @@ def AsyncRefresh():
         dots = dots+' '*(3-len(dots))
         vim.current.buffer[0] = 'Searching '+async_wherenow+dots+' '+modestr
     else:
-        vim.current.buffer[0] = 'Type your pattern  '+modestr
+        vim.current.buffer[0] = 'Type your pattern '+modestr
     if async_output != None:
         output = async_output.get()
         if len(output) > 0:
