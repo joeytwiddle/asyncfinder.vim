@@ -162,6 +162,9 @@ class AsyncGlobber:
     def walk(self,dir, pattern, recurse=True):
         global async_wherenow
         for root, dirs, files in os.walk(dir):
+            # Before iterating the files, prune any unwanted dirs, so we don't descend into them:
+            dirs[:] = [d for d in dirs if not self.fnmatch_list(d,self.ignore_dirs)]
+            # Now we can specify '.git' in g:asyncfinder_ignore_dirs to skip folders instead of filtering out all the children with '*.git*'
             if self.output.toExit():
                 break
             if self.fnmatch_list(root,self.ignore_dirs):
@@ -169,8 +172,7 @@ class AsyncGlobber:
             for d in dirs:
                 async_wherenow = os.path.join(root,d)
                 if self.fnmatch(os.path.join(root,d),pattern):
-                    if not self.fnmatch_list(d,self.ignore_dirs):
-                        self.addDir(os.path.join(root,d))
+                    self.addDir(os.path.join(root,d))
             for f in files:
                 if self.fnmatch(os.path.join(root,f),pattern):
                     if not self.fnmatch_list(f,self.ignore_files):
