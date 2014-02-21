@@ -201,6 +201,8 @@ function! asyncfinder#OpenWindow(bang,win,pattern)
         inoremap <buffer> <C-c> <ESC>:silent! bd! \| echo<CR>
         nnoremap <buffer> <C-c> :silent! bd! \| echo<CR>
         nnoremap <buffer> <Esc> :silent! bd! \| echo<CR>
+        inoremap <buffer> <Tab> <Down>
+        inoremap <buffer> <S-Tab> <Up>
         setlocal nolist   " To hide the annoying $ char
         if exists("+relativenumber")
             :setlocal relativenumber
