@@ -1,19 +1,29 @@
 # asyncfinder.vim - simple asynchronous fuzzy file finder for vim
 # Maintainer: Dmitry "troydm" Geurkov <d.geurkov@gmail.com>
-# Version: 0.2.6
+# Version: 0.2.8
 # Description: asyncfinder.vim is a simple asychronous fuzzy file finder
 # that searches for files in background without making you frustuated 
-# Last Change: 5 September, 2012
+# Last Change: 11 March, 2016
 # License: Vim License (see :help license)
 # Website: https://github.com/troydm/asyncfinder.vim
 
-import vim, os, threading, fnmatch, random
+import vim, os, threading, fnmatch, re, random, platform, subprocess, time
+
+try:
+    import fcntl, select
+except Error:
+    pass
 
 async_pattern = None
+async_grep_pattern = None
 async_prev_pattern = None
+async_grep_prev_pattern = None
 async_prev_mode = None
 async_output = None
 async_wherenow = ""
+async_grep_output = None
+async_grep_file_output = None
+async_on_windows = platform.system() == 'Windows'
 
 class AsyncOutput:
     def __init__(self):
@@ -169,6 +179,7 @@ class AsyncGlobber:
                 break
             if self.fnmatch_list(root,self.ignore_dirs):
                 continue
+            dirs[:] = [d for d in dirs if not self.fnmatch_list(d,self.ignore_dirs)]
             for d in dirs:
                 async_wherenow = os.path.join(root,d)
                 if self.fnmatch(os.path.join(root,d),pattern):
@@ -191,18 +202,15 @@ def AsyncRefreshI():
 def AsyncRefresh():
     global async_pattern, async_prev_pattern, async_prev_mode, async_output
     global async_wherenow
-    if len(vim.current.buffer) == 1:
-        vim.command("bd!")
-        return
     # detect quit
-    cl = len(vim.current.buffer[1])
+    cl = len(vim.current.buffer[0])
     if cl < 2:
         vim.command("bd!")
         return
     elif cl < 3:
-        vim.current.buffer[1] = '>  '
+        vim.current.buffer[0] = '>  '
     mode = vim.eval("getbufvar('%','asyncfinder_mode')")
-    pattern = vim.current.buffer[1]
+    pattern = vim.current.buffer[0]
     pattern = pattern[2:].strip()
     async_prev_pattern = pattern
     async_prev_mode = mode
@@ -213,8 +221,8 @@ def AsyncRefresh():
         # Pattern changed
         if pattern != async_pattern:
             # Remove ouput
-            if len(vim.current.buffer) > 2:
-                vim.current.buffer[2:] = None
+            if len(vim.current.buffer) > 1:
+                vim.current.buffer[1:] = None
             if async_output != None:
                 async_output.exit()
             async_output = AsyncOutput() 
@@ -226,7 +234,7 @@ def AsyncRefresh():
             ignore_files = vim.eval("g:asyncfinder_ignore_files")
             # Get buffer list
             if ('a' in mode or 'b' in mode) and vim.eval("g:asyncfinder_include_buffers") == "1":
-                buf_list = vim.eval("map(filter(range(1,bufnr(\"$\")), \"buflisted(v:val)\"),\"bufname(v:val)\")")
+                buf_list = vim.eval("map(filter(range(1,bufnr(\"$\")), \"buflisted(v:val) && bufname(v:val) != ''\"),\"bufname(v:val)\")")
             else:
                 buf_list = []
             mru_file = ""
@@ -237,36 +245,39 @@ def AsyncRefresh():
                 if ('a' in mode or 'f' in mode) and '**' in pattern:
                     speed_mode = False
             if speed_mode:
-                AsyncSearch(mode,pattern,buf_list,mru_file,match_exact,match_camel_case,ignore_dirs,ignore_files)
+                AsyncSearch(async_output,mode,pattern,buf_list,mru_file,match_exact,match_camel_case,ignore_dirs,ignore_files)
             else:
-                t = threading.Thread(target=AsyncSearch, args=(mode,pattern,buf_list,mru_file,match_exact,match_camel_case,ignore_dirs,ignore_files,))
+                t = threading.Thread(target=AsyncSearch, args=(async_output,mode,pattern,buf_list,mru_file,match_exact,match_camel_case,ignore_dirs,ignore_files,))
                 t.daemon = True
                 t.start()
     else:
-        if len(vim.current.buffer) > 2:
-            vim.current.buffer[2:] = None
+        if len(vim.current.buffer) > 1:
+            vim.current.buffer[1:] = None
         async_pattern = None
         if async_output != None:
             async_output.exit()
             async_output = None
     running = async_output != None and not async_output.toExit()
-    modestr = '(mode: '+mode+' cwd: '+os.getcwd()+')'
+    status = None
+    status_mode='(%#AsyncFinderTitle#mode:%* '+mode+' %#AsyncFinderTitle#cwd:%* '+os.getcwd()+')'
     if running:
         dots = '.'*random.randint(1,3)
         dots = dots+' '*(3-len(dots))
-        vim.current.buffer[0] = 'Searching '+async_wherenow+dots+' '+modestr
+        status = '%#AsyncFinderTitle#Searching '+async_wherenow+dots+'%*'+status_mode
     else:
-        vim.current.buffer[0] = 'Type your pattern '+modestr
+        status = '%#AsyncFinderTitle#Type your pattern%* '+status_mode
+    vim.eval("s:SetStatus('"+status.replace("'","''")+"')")
     if async_output != None:
         output = async_output.get()
         if len(output) > 0:
             vim.current.buffer.append(output)
 
-def AsyncSearch(mode,pattern,buf_list, mru_file, match_exact, match_camel_case, ignore_dirs,ignore_files):
-    global async_output
-    output = async_output
+def AsyncSearch(output,mode,pattern,buf_list, mru_file, match_exact, match_camel_case, ignore_dirs,ignore_files):
+    global async_on_windows
     if output.toExit():
         return
+    if async_on_windows:
+        pattern = pattern.replace('/','\\')
     glob = AsyncGlobber(output)
     glob.ignore_dirs = eval(ignore_dirs)
     glob.ignore_files = eval(ignore_files)
@@ -335,4 +346,234 @@ def AsyncCancel():
     if async_output != None:
         async_output.exit()
         async_output = None
+
+def AsyncGrepRefreshN():
+    AsyncGrepRefresh()
+    vim.command("call feedkeys(\"f\e\")")
+
+def AsyncGrepRefreshI():
+    AsyncGrepRefresh()
+    vim.command("call <SID>MoveCursorI()")
+
+def AsyncGrepRefresh():
+    global async_grep_pattern, async_grep_prev_pattern, async_grep_output, async_grep_file_output
+    # detect quit
+    cl = len(vim.current.buffer[0])
+    if cl < 2:
+        vim.command("bd!")
+        return
+    elif cl < 3:
+        vim.current.buffer[0] = '>  '
+    pattern = vim.current.buffer[0]
+    pattern = pattern[2:]
+    if pattern[-1] == ' ':
+        pattern = pattern[:-1]
+    async_grep_prev_pattern = pattern
+    cmd = vim.eval("s:GrepCmd()")
+    cwd = None
+    if len(pattern) > 0:
+        # Pattern changed
+        if pattern != async_grep_pattern:
+            async_grep_pattern = pattern
+            # Remove ouput
+            if async_grep_output != None:
+                async_grep_output.exit()
+            if async_grep_file_output != None:
+                async_grep_file_output.exit()
+            if len(vim.current.buffer) > 1:
+                vim.current.buffer[1:] = None
+            async_grep_output = AsyncOutput() 
+            async_grep_file_output = None
+            cwd = vim.eval("getcwd()")
+            t = None
+            if cmd.startswith('builtin'):
+                t = threading.Thread(target=AsyncGrepBuiltin, args=(cmd,cwd))
+            else:
+                t = threading.Thread(target=AsyncGrep, args=(cmd,cwd))
+            t.daemon = True
+            t.start()
+    else:
+        if len(vim.current.buffer) > 1:
+            vim.current.buffer[1:] = None
+        async_grep_pattern = None
+        if async_grep_output != None:
+            async_grep_output.exit()
+            async_grep_output = None
+    running = async_grep_output != None and not async_grep_output.toExit()
+    if cmd.startswith('builtin'):
+        cmd = 'ignore_files: '+vim.eval("g:asyncfinder_grep_ignore_files")
+        cmd += ' ignore_dirs: '+vim.eval("g:asyncfinder_grep_ignore_dirs")
+        if vim.eval("g:asyncfinder_grep_ignore_case") == 1:
+            cmd += ' ignore_case'
+        if cwd == None:
+            cwd = vim.eval("getcwd()")
+        cmd += ' cwd: '+cwd
+    status = None
+    if running:
+        dots = '.'*random.randint(1,3)
+        dots = dots+' '*(3-len(dots))
+        status = '%#AsyncGrepTitle#Searching files'+dots+'%*('+cmd+')'
+    else:
+        status = '%#AsyncGrepTitle#Type your pattern%* ('+cmd+')' 
+    vim.eval("s:SetStatus('"+status.replace("'","''")+"')")
+    if async_grep_output != None:
+        output = async_grep_output.get()
+        if len(output) > 0:
+            vim.current.buffer.append(output)
+
+
+def AsyncGrepBuiltin(cmd,cwd):
+    global async_grep_output, async_grep_file_output
+    output = async_grep_output
+    if output.toExit():
+        return
+    ignore_case = False
+    cmd = cmd[7:].lstrip()
+    if cmd.startswith('-i'):
+        ignore_case = True
+        cmd = cmd[2:].lstrip()
+    ignore_files =cmd[:cmd.index(']')+1]
+    cmd = cmd[cmd.index(']')+1:].lstrip()
+    ignore_dirs = cmd[:cmd.index(']')+1]
+    cmd = cmd[cmd.index(']')+1:].lstrip()
+    i = 1
+    while cmd[i] != "'" or cmd[i-1] == "\\":
+        i += 1
+    pattern = cmd[1:i]
+    pattern = pattern.replace("\\'","'")
+    cwd = cmd[i+1:].lstrip()
+    async_grep_file_output = AsyncOutput()
+    file_output = async_grep_file_output
+    match_exact = vim.eval("g:asyncfinder_match_exact") == '1'
+    match_camel_case = vim.eval("g:asyncfinder_match_camel_case") == '1'
+    buf_list = []
+    mru_file = ""
+    t = threading.Thread(target=AsyncSearch, args=(file_output,'f','**',buf_list,mru_file,match_exact,match_camel_case,ignore_dirs,ignore_files,))
+    t.daemon = True
+    t.start()
+    if pattern.startswith('/') and pattern.endswith('/'):
+        try:
+            if ignore_case:
+                pattern = re.compile(pattern[1:-1],re.IGNORECASE)
+            else:
+                pattern = re.compile(pattern[1:-1])
+        except:
+            pass
+    if type(pattern) == str and ignore_case:
+        pattern = pattern.lower()
+    while not file_output.toExit():
+        files = file_output.get()
+        if len(files) == 0:
+            time.sleep(0.01)
+        else:
+            for f in files:
+                lines = AsyncSearchInFile(f[2:],pattern,cwd,ignore_case)
+                if len(lines) > 0:
+                    output.extend(lines)
+    for f in file_output.get():
+        lines = AsyncSearchInFile(f[2:],pattern,cwd,ignore_case)
+        if len(lines) > 0:
+            output.extend(lines)
+    output.exit()
+
+def AsyncSearchInFile(fn,pattern,cwd,ignore_case):
+    f = None
+    found = []
+    try:
+        fn = os.path.abspath(cwd+os.sep+fn)
+        f = open(fn,'r')
+        if type(pattern) == str:
+            for i, line in enumerate(f):
+                if ignore_case:
+                    line = line.lower()
+                if pattern in line:
+                    found.append(fn+":"+str(i+1)+":"+line)
+        else:
+            for i, line in enumerate(f):
+                if len(re.findall(pattern, line)) > 0:
+                    found.append(fn+":"+str(i+1)+":"+line)
+        return found
+    except:
+        return found
+    finally:
+        if f is not None:
+            f.close()
+
+def AsyncGrep(cmd,cwd):
+    global async_grep_output
+    output = async_grep_output
+    if output.toExit():
+        return
+    p = subprocess.Popen(cmd+" 2>&1", shell=True, cwd=cwd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    fcntl.fcntl(p.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+    if 'poll' in dir(select):
+        pl = select.poll()
+        pl.register(p.stdout)
+    else:
+        pl = None
+    outread = ''
+    outrem = ''
+    while True:
+        try:
+            outread = ''
+            if pl != None:
+                plr = pl.poll(50)
+                if len(plr) == 0:
+                    outread = ''
+                else:
+                    plr = plr[0][1]
+                    try:
+                        if plr & select.POLLIN or plr & select.POLLPRI:
+                            outread = p.stdout.read()
+                        else:
+                            outread = ''
+                    except IOError:
+                        outread = ''
+            else:
+                try:
+                    outread = p.stdout.read()
+                except IOError:
+                    outread = ''
+            if len(outread) == 0:
+                retval = p.poll()
+                if retval != None:
+                    break
+                else:
+                    time.sleep(0.01)
+            else:
+                outread = outread.split("\n")
+                if len(outrem) > 0:
+                    outread[0] = outrem+outread[0] 
+                if len(outread[-1]) > 0:
+                    outrem = outread[-1]
+                outread = outread[:-1]
+                output.extend(outread)
+            if output.toExit():
+                break
+        except IOError:
+            time.sleep(0.01)
+    if len(outread) > 0:
+        if type(outread) == str:
+            outread = outread.split("\n")
+        if len(outread[-1]) == 0:
+            outread = outread[:-1]
+        output.extend(outread)
+    output.exit()
+    if pl != None:
+        pl.unregister(p.stdout)
+    try:
+        p.terminate()
+    except OSError:
+        pass
+
+
+def AsyncGrepCancel():
+    global async_grep_pattern, async_grep_output, async_grep_file_output
+    async_grep_pattern = None
+    if async_grep_output != None:
+        async_grep_output.exit()
+        async_grep_output = None
+    if async_grep_file_output != None:
+        async_grep_file_output.exit()
+        async_grep_file_output = None
 

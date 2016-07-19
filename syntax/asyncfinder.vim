@@ -1,9 +1,9 @@
 " asyncfinder.vim - simple asynchronous fuzzy file finder for vim
 " Maintainer: Dmitry "troydm" Geurkov <d.geurkov@gmail.com>
-" Version: 0.2.6
+" Version: 0.2.7
 " Description: asyncfinder.vim is a simple asychronous fuzzy file finder
 " that searches for files in background without making you frustuated 
-" Last Change: 5 September, 2012
+" Last Change: 10 October, 2014
 " License: Vim License (see :help license)
 " Website: https://github.com/troydm/asyncfinder.vim
 "
@@ -17,10 +17,6 @@ endif
 let s:save_cpo = &cpo
 set cpo&vim
 
-syntax match AsyncFinderTitle /^Type your pattern/ 
-syntax match AsyncFinderTitle /^Searching files\.*/
-syntax match AsyncFinderTitle /mode: /
-syntax match AsyncFinderTitle /cwd: /
 syntax match AsyncFinderPattern /^>.*$/
 syntax match AsyncFinderDir /^d .*$/
 syntax match AsyncFinderFile /^f /
