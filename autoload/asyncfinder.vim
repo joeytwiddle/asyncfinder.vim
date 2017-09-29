@@ -58,7 +58,7 @@ function! s:Edit()
         endif
         if (f[0] == 'f' || f[0] == 'b' || f[0] == 'm') && f[1] == ' ' 
             silent! bd!
-            exe ':e '.f[2:]
+            exe ':e '.escape(f[2:], ' \')
         endif
     endif
 endfunction
