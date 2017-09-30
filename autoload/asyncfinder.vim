@@ -203,9 +203,16 @@ function! asyncfinder#OpenWindow(bang,win,pattern)
         nnoremap <buffer> <Esc> :silent! bd! \| echo<CR>
         inoremap <buffer> <Tab> <Down>
         inoremap <buffer> <S-Tab> <Up>
-        setlocal nolist   " To hide the annoying $ char
+
+        " Hide the annoying $ char
+        setlocal nolist
+        " Show the currently selected file/line clearly
+        if exists("+cursorline")
+            setlocal cursorline
+        endif
+        " Make it easier to skip to a specific file/line
         if exists("+relativenumber")
-            :setlocal relativenumber
+            setlocal relativenumber
         endif
 
         startinsert
