@@ -290,6 +290,18 @@ function! asyncfinder#OpenWindow(bang,win,pattern)
         nnoremap <buffer> <Esc> :silent! bd! \| echo<CR>
         inoremap <buffer> <C-f> <C-o>:call <SID>ChangeMode()<CR>
         nnoremap <buffer> <C-f> :call <SID>ChangeMode()<CR>
+
+        " Hide the annoying $ char
+        setlocal nolist
+        " Show the currently selected file/line clearly
+        if exists("+cursorline")
+            setlocal cursorline
+        endif
+        " Make it easier to skip to a specific file/line
+        if exists("+relativenumber")
+            setlocal relativenumber
+        endif
+
         startinsert
         let pattern = a:pattern
         if a:bang == '!'
