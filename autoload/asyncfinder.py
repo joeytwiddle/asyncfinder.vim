@@ -23,6 +23,7 @@ async_output = None
 async_grep_output = None
 async_grep_file_output = None
 async_on_windows = platform.system() == 'Windows'
+async_wherenow = ""
 
 class AsyncOutput:
     def __init__(self):
@@ -171,6 +172,7 @@ class AsyncGlobber:
         self.walk(pre,post,rec_index != None)
 
     def walk(self,dir, pattern, recurse=True):
+        global async_wherenow
         i = 0
         walkQueue = None
         resultQueue = None
@@ -180,6 +182,7 @@ class AsyncGlobber:
                 return
             if self.fnmatch_list(root,self.ignore_dirs):
                 continue
+            async_wherenow = os.path.join(root) + " DD"
             i += 1
             if i == 1000:
                 threadsCount = multiprocessing.cpu_count()*2-1
@@ -213,9 +216,11 @@ class AsyncGlobber:
             else:
                 dirs[:] = [d for d in dirs if not self.fnmatch_list(d,self.ignore_dirs)]
                 for d in dirs:
+                    async_wherenow = os.path.join(root,d) + " d"
                     if self.fnmatch(os.path.join(root,d),pattern):
                         self.addDir(os.path.join(root,d))
                 for f in files:
+                    async_wherenow = os.path.join(root,f) + " f"
                     if self.fnmatch(os.path.join(root,f),pattern):
                         if not self.fnmatch_list(f,self.ignore_files):
                             self.addFile(os.path.join(root,f))
@@ -270,9 +275,11 @@ class AsyncGlobber:
             rfiles = []
             dirs[:] = [d for d in dirs if not self.fnmatch_list(d,self.ignore_dirs)]
             for d in dirs:
+                async_wherenow = os.path.join(root,d) + " D"
                 if self.fnmatch(os.path.join(root,d),pattern):
                     rdirs.append(os.path.join(root,d))
             for f in files:
+                async_wherenow = os.path.join(root,f) + " F"
                 if self.fnmatch(os.path.join(root,f),pattern):
                     if not self.fnmatch_list(f,self.ignore_files):
                         rfiles.append(os.path.join(root,f))
@@ -297,6 +304,7 @@ def AsyncRefreshI():
 
 def AsyncRefresh():
     global async_pattern, async_prev_pattern, async_prev_mode, async_output
+    global async_wherenow
     # detect quit
     cl = len(vim.current.buffer[0])
     if cl < 2:
@@ -354,7 +362,7 @@ def AsyncRefresh():
             async_output = None
     running = async_output != None and not async_output.toExit()
     status = None
-    status_mode='(%#AsyncFinderTitle#mode:%* '+mode+' %#AsyncFinderTitle#cwd:%* '+os.getcwd()+')'
+    status_mode='(%#AsyncFinderTitle#mode:%* '+mode+' %#AsyncFinderTitle#cwd:%* %<'+async_wherenow+')'
     if running:
         dots = '.'*random.randint(1,3)
         dots = dots+' '*(3-len(dots))
