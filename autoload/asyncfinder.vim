@@ -276,6 +276,8 @@ function! asyncfinder#OpenWindow(bang,win,pattern)
         au CursorHold <buffer> python asyncfinder.AsyncRefreshN()
         au CursorHoldI <buffer> python asyncfinder.AsyncRefreshI()
         au InsertCharPre <buffer> call <SID>CharTyped()
+        inoremap <buffer> <Tab> <Down>
+        inoremap <buffer> <S-Tab> <Up>
         inoremap <buffer> <CR> <ESC>:call <SID>EnterPressedI()<CR>
         inoremap <buffer> <BS> <ESC>:call <SID>BackspacePressed() \| startinsert<CR>
         inoremap <buffer> <Del> <ESC>l:call <SID>DelPressed() \| startinsert<CR>
