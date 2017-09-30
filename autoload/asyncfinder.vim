@@ -293,7 +293,10 @@ function! asyncfinder#OpenWindow(bang,win,pattern)
         inoremap <buffer> <S-Tab> <Up>
         setlocal nolist   " To hide the annoying $ char
         if exists("+relativenumber")
-            :setlocal relativenumber
+            setlocal relativenumber
+        endif
+        if exists("+cursorline")
+            setlocal cursorline
         endif
 
         startinsert
