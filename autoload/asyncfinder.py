@@ -373,6 +373,8 @@ def AsyncSearch(output,mode,pattern,buf_list, mru_file, match_exact, match_camel
         return
     if async_on_windows:
         pattern = pattern.replace('/','\\')
+    # Joey: Allow user to hit space to act as wildcard
+    pattern = pattern.replace(' ','*')
     glob = AsyncGlobber(output)
     glob.ignore_dirs = eval(ignore_dirs)
     glob.ignore_files = eval(ignore_files)
