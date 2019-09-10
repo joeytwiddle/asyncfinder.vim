@@ -213,11 +213,17 @@ class AsyncGlobber:
                         self.addFile(rfile)
             else:
                 dirs[:] = [d for d in dirs if not self.fnmatch_list(d,self.ignore_dirs)]
+                # Joey: Strip leading './' from pattern
+                pattern_lite = pattern[pattern.startswith('./') and 2:]
                 for d in dirs:
-                    if self.fnmatch(os.path.join(root,d),pattern):
+                    #if self.fnmatch(os.path.join(root,d),pattern):
+                    # Joey: Match filename only, not path
+                    if self.fnmatch(d, pattern_lite):
                         self.addDir(os.path.join(root,d))
                 for f in files:
-                    if self.fnmatch(os.path.join(root,f),pattern):
+                    #if self.fnmatch(os.path.join(root,f),pattern):
+                    # Joey: Match filename only, not path
+                    if self.fnmatch(f, pattern_lite):
                         if not self.fnmatch_list(f,self.ignore_files):
                             self.addFile(os.path.join(root,f))
                 if not recurse:
