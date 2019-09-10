@@ -18,8 +18,19 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 syntax match AsyncGrepPattern /^>.*$/
-syntax match AsyncGrepFilename /^\zs[^:]\+\ze:/
-syntax match AsyncGrepLine /^[^:]\+:\zs\d\+\ze:/
+"syntax match AsyncGrepFilename /^\zs[^:]\+\ze:/
+"syntax match AsyncGrepLine /^[^:]\+:\zs\d\+\ze:/
+
+"syntax region AsyncGrepFilename start=/^/ms=s end=/^[^:]*/me=e
+"syntax region AsyncGrepLine start=/^[^:]*:\d/ms=e end=/^[^:]*:\d*/me=e
+
+" Worked but the line number could match anywhere in the line!
+"syntax match AsyncGrepFilename /^[^:]\+/
+"syntax match AsyncGrepLine /:\zs\d\+\ze:/
+" Safer
+syntax match AsyncGrepFilenameAndLine /^[^:]\+:\d\+:/ contains=AsyncGrepFilename,AsyncGrepLine
+syntax match AsyncGrepFilename /^[^:]\+\ze:/ containedin=AsyncGrepFilenameAndLine
+syntax match AsyncGrepLine /:\zs\d\+\ze:/ containedin=AsyncGrepFilenameAndLine
 
 highlight default link AsyncGrepTitle    Comment
 highlight default link AsyncGrepPattern  Title
