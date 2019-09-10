@@ -285,8 +285,12 @@ function! asyncfinder#OpenWindow(bang,win,pattern)
         nnoremap <buffer> <CR> :call <SID>EnterPressed()<CR>
         nnoremap <buffer> <Del> :call <SID>DelPressed()<CR>
         inoremap <buffer> <C-q> <ESC>:silent! bd! \| echo<CR>
+        inoremap <buffer> <C-c> <ESC>:silent! bd! \| echo<CR>
+        nnoremap <buffer> <C-c> :silent! bd! \| echo<CR>
         inoremap <buffer> <C-f> <C-o>:call <SID>ChangeMode()<CR>
         nnoremap <buffer> <C-f> :call <SID>ChangeMode()<CR>
+        inoremap <buffer> <Tab> <Down>
+        inoremap <buffer> <S-Tab> <Up>
         startinsert
         let pattern = a:pattern
         if a:bang == '!'
@@ -365,6 +369,10 @@ function! asyncfinder#OpenGrepWindow(bang,win,pattern)
         inoremap <buffer> <Del> <ESC>l:call <SID>DelPressed() \| startinsert<CR>
         nnoremap <buffer> <CR> :call <SID>EnterPressedGrep()<CR> \| echo<CR>
         inoremap <buffer> <C-q> <ESC>:silent! bd! \| echo<CR>
+        inoremap <buffer> <C-c> <ESC>:silent! bd! \| echo<CR>
+        nnoremap <buffer> <C-c> :silent! bd! \| echo<CR>
+        inoremap <buffer> <Tab> <Down>
+        inoremap <buffer> <S-Tab> <Up>
         startinsert
         let pattern = a:pattern
         if a:bang == '!'
