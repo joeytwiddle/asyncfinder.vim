@@ -73,9 +73,10 @@ class AsyncGlobber:
     def addDir(self,p):
         if p.startswith(self.dirps):
             p = p[len(self.dirps):] 
-        if not p in self.buffers:
-            self.output.append("d "+p)
-            self.files.append(p)
+        # Joey: Do not add dirs to results (should be made into an option)
+        #if not p in self.buffers:
+            #self.output.append("d "+p)
+            #self.files.append(p)
 
     def addFile(self,p):
         if p.startswith(self.dirps):
