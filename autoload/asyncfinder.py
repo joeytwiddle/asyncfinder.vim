@@ -296,7 +296,9 @@ class AsyncGlobber:
 
 def AsyncRefreshN():
     AsyncRefresh()
-    vim.command("call feedkeys(\"f\e\")")
+    #vim.command("call feedkeys(\"f\e\")")
+    # Joey: My EasyMotion sets a keybind for 'f' which was conflicting, so instead:
+    vim.command("call feedkeys(\"hl\")")
 
 def AsyncRefreshI():
     AsyncRefresh()
@@ -453,7 +455,9 @@ def AsyncCancel():
 
 def AsyncGrepRefreshN():
     AsyncGrepRefresh()
-    vim.command("call feedkeys(\"f\e\")")
+    #vim.command("call feedkeys(\"f\e\")")
+    # Joey: My EasyMotion sets a keybind for 'f' which was conflicting, so instead:
+    vim.command("call feedkeys(\"hl\")")
 
 def AsyncGrepRefreshI():
     AsyncGrepRefresh()
